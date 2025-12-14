@@ -13,6 +13,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import api from "@/lib/axiosInstance";
 
 const ReservationStatus = () => {
   const navigate = useNavigate();
@@ -21,54 +22,56 @@ const ReservationStatus = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const fetchReservations = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch("https://sirsakapi.teknohole.com/api/reservations/", {
-        headers: {
-          "Authorization": `Bearer ${localStorage.getItem("access_token")}`,
-        },
-      });
-      if (!res.ok) throw new Error("Gagal ambil data reservasi");
+  const [pagination, setPagination] = useState({
+    page: 1,
+    count: 0,
+    next: null,
+    previous: null,
+  });
 
-      const data = await res.json();
-      setReservations(data.results || []);
-    } catch (err) {
-      console.error(err);
-      setError("Tidak bisa memuat data reservasi");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const fetchReservations = async (page = 1) => {
+  try {
+    setLoading(true);
+
+    const res = await api.get("/reservations/", {
+      params: {
+        page,
+        ordering: "-created_at",
+      },
+    });
+
+    setReservations(res.data.results || []);
+    setPagination({
+      page,
+      count: res.data.count,
+      next: res.data.next,
+      previous: res.data.previous,
+    });
+  } catch (err) {
+    console.error(err);
+    setError("Tidak bisa memuat data reservasi");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleCancelReservation = async (id) => {
     const confirmDelete = window.confirm("Yakin ingin membatalkan reservasi ini?");
     if (!confirmDelete) return;
 
     try {
-      const res = await fetch(`https://sirsakapi.teknohole.com/api/reservations/${id}/`, {
-        method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${localStorage.getItem("access_token")}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(msg || "Gagal membatalkan reservasi");
-      }
+      await api.delete(`/reservations/${id}/`);
 
       setReservations((prev) => prev.filter((r) => r.id !== id));
       alert("Reservasi berhasil dibatalkan ✅");
     } catch (err) {
       console.error("Error:", err);
-      alert("Gagal menghapus reservasi. Periksa koneksi atau CORS server ❌");
+      alert("Gagal membatalkan reservasi ❌");
     }
   };
 
   useEffect(() => {
-    fetchReservations();
+    fetchReservations(1);
   }, []);
 
   if (loading) return <p className="text-center mt-6">Memuat data reservasi...</p>;
@@ -91,7 +94,7 @@ const ReservationStatus = () => {
             variant="outline"
             size="sm"
             className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-            onClick={fetchReservations}
+            onClick={() => fetchReservations(1)}
           >
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
@@ -170,6 +173,28 @@ const ReservationStatus = () => {
             </CardContent>
           </Card>
         ))}
+
+        <div className="flex justify-between items-center mt-4">
+          <Button
+            variant="outline"
+            disabled={!pagination.previous}
+            onClick={() => fetchReservations(pagination.page - 1)}
+          >
+            Sebelumnya
+          </Button>
+
+          <span className="text-sm text-muted-foreground">
+            Halaman {pagination.page}
+          </span>
+
+          <Button
+            variant="outline"
+            disabled={!pagination.next}
+            onClick={() => fetchReservations(pagination.page + 1)}
+          >
+            Selanjutnya
+          </Button>
+        </div>
 
         {reservations.length === 0 && (
           <Card className="shadow-soft">
