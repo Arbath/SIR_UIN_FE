@@ -8,7 +8,8 @@ import {
   MessageIcon,
   SettingsIcon,
   SearchIcon,
-  LogoutIcon
+  LogoutIcon,
+  DocsSingle
 } from "./icons/general.jsx";
 
 import {
@@ -44,7 +45,7 @@ const menuItems = {
       label: "Reservasi",
       items: [
         { title: "Cari Ruangan", url: "/user/search", icon: SearchIcon },
-        { title: "Ajukan Reservasi", url: "/user/reserve", icon: DoorIcon },
+        { title: "Ajukan Reservasi", url: "/user/reserve", icon: DocsSingle },
         { title: "Status Reservasi", url: "/user/status", icon: CheckIcon }
       ],
     },
@@ -65,15 +66,16 @@ const menuItems = {
     {
       label: "Manajemen",
       items: [
-        { title: "Kelola Pengguna", url: "/admin/users", icon: UserIcon },
-        { title: "Kelola Ruangan", url: "/admin/rooms", icon: DoorIcon },
-        { title: "Persetujuan Akhir", url: "/admin/reports", icon: CheckIcon },
+        { title: "Kelola Pengguna", url: "/admin/management/users", icon: UserIcon },
+        { title: "Kelola Ruangan", url: "/admin/management/rooms", icon: DoorIcon },
+        { title: "Ajukan Reservasi", url: "/admin/reserve", icon: DocsSingle },
+        { title: "Persetujuan Akhir", url: "/admin/approvals", icon: CheckIcon },
       ],
     },
     {
       label: "Laporan",
       items: [
-        { title: "Feedback Pengguna", url: "/admin/feedback", icon: MessageIcon },
+        { title: "Feedback Pengguna", url: "/admin/management/feedback", icon: MessageIcon },
         { title: "Pengaturan", url: "/admin/settings", icon: SettingsIcon },
       ],
     },
@@ -168,8 +170,12 @@ export function AppSidebar() {
         {!collapsed ? (
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center">
-                <BookOpen className="h-6 w-6 text-white" />
+              <div>
+                <img
+                  src="/sirsak.png"
+                  alt="Sirsak"
+                  className="w-6 h-6 object-contain"
+                />
               </div>
               <h2 className="font-semibold text-[19px] text-foreground">
                 SIRSAK

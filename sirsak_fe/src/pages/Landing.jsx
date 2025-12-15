@@ -11,6 +11,34 @@ const Landing = () => {
   const [showLogin, setShowLogin] = useState(false);
   const [loginData, setLoginData] = useState({ username: "", password: "" });
   const navigate = useNavigate();
+  const [activeSection, setActiveSection] = useState("beranda");
+
+  useEffect(() => {
+    const sections = ["beranda", "tentang", "fitur", "testimoni"];
+
+    const onScroll = () => {
+      const scrollY = window.scrollY + 100;
+
+      for (const id of sections) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+
+        const { offsetTop, offsetHeight } = el;
+
+        if (scrollY >= offsetTop && scrollY < offsetTop + offsetHeight) {
+          setActiveSection(id);
+          break;
+        }
+      }
+    };
+
+    window.addEventListener("scroll", onScroll);
+    onScroll();
+
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, []);
 
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
@@ -57,26 +85,40 @@ const Landing = () => {
     <div className="min-h-screen bg-background">
 
       {/* HEADER */}
-      <header className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur border-b">
+      <header className="fixed top-0 w-full z-50 bg-background/10 backdrop-blur">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2 font-bold">
-            <Building2 className="h-5 w-5" />
-            SIR
+          <div className="flex items-center gap-2 font-bold text-white">
+            <div>
+              <img
+                src="/sirsak.png"
+                alt="Sirsak"
+                className="w-6 h-6 object-contain"
+              />
+            </div>
+            SIRSAK
           </div>
           <nav className="hidden md:flex gap-6 text-sm">
-            <a href="#beranda">Beranda</a>
-            <a href="#tentang">Tentang</a>
-            <a href="#fitur">Fitur</a>
-            <a href="#cara-kerja">Cara Kerja</a>
-            <a href="#kontak">Kontak</a>
+            {["beranda", "tentang", "fitur", "testimoni"].map((id) => (
+              <a
+                key={id}
+                href={`#${id}`}
+                className={`transition ${
+                  activeSection === id
+                    ? "font-medium text-white"
+                    : "font-normal text-white/80 hover:text-white"
+                }`}
+              >
+                {id.charAt(0).toUpperCase() + id.slice(1)}
+              </a>
+            ))}
           </nav>
-          <Button size="sm" onClick={() => setShowLogin(true)}>Login</Button>
+          <Button size="sm" className="bg-[#35775F]" onClick={() => setShowLogin(true)}>Masuk</Button>
         </div>
       </header>
 
       {/* LANDING SECTIONS */}
       <main
-        className={`pt-16 transition-all duration-700 ease-in-out overflow-hidden
+        className={`transition-all duration-700 ease-in-out overflow-hidden
         ${showLogin ? "max-h-0 opacity-0 pointer-events-none" : "max-h-[5000px] opacity-100"}`}
       >
 
@@ -92,16 +134,15 @@ const Landing = () => {
         >
           <div className="absolute inset-0 bg-black/60" />
           <div className="relative z-10 container mx-auto px-4 text-center">
-            <Building2 className="h-14 w-14 mx-auto mb-6" />
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              Sistem Informasi Ruangan
+              Jadwal Bentrok?
+              Reservasi Sekarang
             </h1>
             <p className="max-w-2xl mx-auto opacity-90 mb-10">
-              Platform terintegrasi untuk pengelolaan dan peminjaman ruangan
-              akademik secara efisien dan terpusat
+              Solusi untuk anda yang sering menghadapi permasalahan ruangan yang tidak sesuai dengan jadwal yang direncanakan.
             </p>
-            <Button size="lg" onClick={() => setShowLogin(true)}>
-              Login ke Sistem
+            <Button size="lg" className="bg-[#35775F]" onClick={() => setShowLogin(true)}>
+              Mulai Sekarang
             </Button>
           </div>
         </section>
@@ -113,10 +154,7 @@ const Landing = () => {
         <section id="fitur" className="min-h-screen py-24 bg-muted" />
 
         {/* CARA KERJA */}
-        <section id="cara-kerja" className="min-h-screen py-24 container mx-auto px-4" />
-
-        {/* KONTAK */}
-        <section id="kontak" className="min-h-screen py-24 bg-muted" />
+        <section id="testimoni" className="min-h-screen py-24 container mx-auto px-4" />
       </main>
 
       {/* LOGIN MODE */}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,12 +20,6 @@ import {
   MoreHorizontal
 } from "lucide-react";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -34,151 +28,94 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import api from "@/lib/axiosInstance";
 
 const UserManagement = () => {
   const { toast } = useToast();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterRole, setFilterRole] = useState("");
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [newUser, setNewUser] = useState({
-    name: "",
+    username: "",
     email: "",
-    role: "",
-    phone: "",
-    studentId: "",
-    department: ""
+    first_name: "",
+    last_name: "",
+    password1: "",
+    password2: "",
+    kontak: "",
+    fakultas: "",
+    prodi: ""
   });
 
-  // Mock data for users
-  const [users] = useState([
-    {
-      id: 12,
-      name: "Ahmad Rizki Maulana",
-      email: "ahmad.rizki@email.com",
-      role: "student",
-      phone: "08123456789",
-      studentId: "2021001",
-      department: "Sistem Informasi",
-      status: "active",
-      lastLogin: "2024-01-19 10:30",
-      joinDate: "2021-08-15"
-    },
-    {
-      id: 13,
-      name: "Siti Nurhaliza",
-      email: "siti.nur@email.com", 
-      role: "student",
-      phone: "08234567890",
-      studentId: "2021002",
-      department: "Teknik Informatika",
-      status: "active",
-      lastLogin: "2024-01-19 09:15",
-      joinDate: "2021-08-15"
-    },
-    {
-      id: 14,
-      name: "Dr. Ahmad Susanto, M.Kom",
-      email: "dr.ahmad@university.ac.id",
-      role: "lecturer",
-      phone: "08345678901",
-      employeeId: "L001",
-      department: "Sistem Informasi", 
-      status: "active",
-      lastLogin: "2024-01-19 08:45",
-      joinDate: "2015-03-01"
-    },
-    {
-      id: 15,
-      name: "Dr. Siti Aminah, M.T",
-      email: "dr.siti@university.ac.id",
-      role: "lecturer",
-      phone: "08456789012",
-      employeeId: "L002",
-      department: "Teknik Informatika",
-      status: "active", 
-      lastLogin: "2024-01-18 16:20",
-      joinDate: "2018-09-01"
-    },
-    {
-      id: 16,
-      name: "Budi Santoso",
-      email: "budi.santoso@email.com",
-      role: "student",
-      phone: "08567890123", 
-      studentId: "2020005",
-      department: "Sistem Informasi",
-      status: "inactive",
-      lastLogin: "2024-01-10 14:30",
-      joinDate: "2020-08-15"
-    }
-  ]);
+  useEffect(() => {
+    const res = api.get("/profile/me");
+    console.log(res);
+  }, []);
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = !filterRole || user.role === filterRole;
-    return matchesSearch && matchesRole;
-  });
-
-  const getRoleBadge = (role) => {
-    switch (role) {
-      case 'student':
-        return <Badge className="bg-blue-500 text-white">Mahasiswa</Badge>;
-      case 'lecturer':
-        return <Badge className="bg-green-500 text-white">Dosen</Badge>;
-      case 'admin':
-        return <Badge className="bg-purple-500 text-white">Admin</Badge>;
-      default:
-        return <Badge variant="secondary">{role}</Badge>;
-    }
-  };
-
-  const getStatusBadge = (status) => {
-    return status === 'active' 
-      ? <Badge className="bg-success text-white">Aktif</Badge>
-      : <Badge className="bg-muted text-muted-foreground">Tidak Aktif</Badge>;
-  };
-
-  const handleAddUser = () => {
-    // Basic validation
-    if (!newUser.name || !newUser.email || !newUser.role) {
+  const handleAddUser = async () => {
+    if (
+      !newUser.username ||
+      !newUser.email ||
+      !newUser.password1 ||
+      !newUser.password2 ||
+      !newUser.kontak
+    ) {
       toast({
         title: "Mohon lengkapi field yang wajib diisi",
-        variant: "destructive"
+        description: "Username, email, dan password wajib diisi",
+        variant: "destructive",
       });
       return;
     }
 
-    toast({
-      title: "Pengguna berhasil ditambahkan!",
-      description: `${newUser.name} telah ditambahkan sebagai ${newUser.role}`,
-    });
+    try {
+      const payload = {
+        username: newUser.username,
+        email: newUser.email,
+        first_name: newUser.first_name,
+        last_name: newUser.last_name,
+        password1: newUser.password1,
+        password2: newUser.password2,
+        kontak: newUser.kontak,
+        fakultas: newUser.fakultas,
+        prodi: newUser.prodi
+      };
 
-    setNewUser({
-      name: "",
-      email: "",
-      role: "",
-      phone: "",
-      studentId: "",
-      department: ""
-    });
-    setIsAddUserOpen(false);
+      await api.post("/register", payload);
+
+      toast({
+        title: "Pengguna berhasil ditambahkan",
+        description: `${newUser.username} berhasil dibuat`,
+        variant: "success",
+      });
+
+      setNewUser({
+        username: "",
+        email: "",
+        first_name: "",
+        last_name: "",
+        password1: "",
+        password2: "",
+        kontak: "",
+        fakultas: "",
+        prodi: ""
+      });
+
+      setIsAddUserOpen(false);
+
+    } catch (err) {
+      console.error("Gagal menambahkan user:", err);
+
+      toast({
+        title: "Gagal menambahkan pengguna",
+        description:
+          err.response?.data?.detail ||
+          err.response?.data?.email?.[0] ||
+          err.response?.data?.username?.[0] ||
+          "Terjadi kesalahan pada server",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleDeleteUser = (userId, userName) => {
-    toast({
-      title: "Pengguna berhasil dihapus",
-      description: `${userName} telah dihapus dari sistem`,
-    });
-  };
-
-  const handleToggleStatus = (userId, userName, currentStatus) => {
-    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-    toast({
-      title: `Status pengguna diubah`,
-      description: `${userName} sekarang ${newStatus === 'active' ? 'aktif' : 'tidak aktif'}`,
-    });
-  };
 
   return (
     <div className="p-6">
@@ -203,84 +140,124 @@ const UserManagement = () => {
                 Lengkapi informasi pengguna baru yang akan ditambahkan
               </DialogDescription>
             </DialogHeader>
+
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nama Lengkap *</Label>
+              {/* NAMA LENGKAP */}
+              <div className="space-y-2">
+                <Label>Nama Lengkap *</Label>
+                <Input
+                  placeholder="Masukkan nama lengkap"
+                  onBlur={(e) => {
+                    const parts = e.target.value.trim().split(/\s+/);
+
+                    const first_name =
+                      parts.length > 1 ? parts.slice(0, -1).join(" ") : parts[0] || "";
+
+                    const last_name =
+                      parts.length > 1 ? parts[parts.length - 1] : "";
+
+                    setNewUser(prev => ({
+                      ...prev,
+                      first_name,
+                      last_name,
+                    }));
+                  }}
+                />
+              </div>
+
+              {/* EMAIL & ROLE */}
+              <div className="flex justify-between gap-3">
+                <div className="space-y-2 flex-1">
+                  <Label>Email *</Label>
                   <Input
-                    id="name"
-                    placeholder="Masukkan nama lengkap"
-                    value={newUser.name}
-                    onChange={(e) => setNewUser(prev => ({...prev, name: e.target.value}))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
                     type="email"
                     placeholder="email@domain.com"
                     value={newUser.email}
-                    onChange={(e) => setNewUser(prev => ({...prev, email: e.target.value}))}
+                    onChange={(e) => {
+                      const email = e.target.value;
+                      const username = email.includes("@")
+                        ? email.split("@")[0]
+                        : "";
+
+                      setNewUser(prev => ({
+                        ...prev,
+                        email,
+                        username,
+                      }));
+                    }}
                   />
                 </div>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="role">Role *</Label>
-                  <Select value={newUser.role} onValueChange={(value) => setNewUser(prev => ({...prev, role: value}))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Pilih role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="student">Mahasiswa</SelectItem>
-                      <SelectItem value="lecturer">Dosen</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">No. Telepon</Label>
+                <div className="space-y-2 flex-1">
+                  <Label>Kontak *</Label>
                   <Input
-                    id="phone"
-                    placeholder="08xxxxxxxxxx"
-                    value={newUser.phone}
-                    onChange={(e) => setNewUser(prev => ({...prev, phone: e.target.value}))}
+                    type="number"
+                    placeholder="08XXXXXXXXXX"
+                    value={newUser.kontak}
+                    onChange={(e) =>
+                      setNewUser(prev => ({ ...prev, kontak: e.target.value }))
+                    }
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {newUser.role === 'student' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="studentId">NIM</Label>
-                    <Input
-                      id="studentId"
-                      placeholder="Nomor Induk Mahasiswa"
-                      value={newUser.studentId}
-                      onChange={(e) => setNewUser(prev => ({...prev, studentId: e.target.value}))}
-                    />
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <Label htmlFor="department">Jurusan/Departemen</Label>
-                  <Select value={newUser.department} onValueChange={(value) => setNewUser(prev => ({...prev, department: value}))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Pilih jurusan" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Sistem Informasi">Sistem Informasi</SelectItem>
-                      <SelectItem value="Teknik Informatika">Teknik Informatika</SelectItem>
-                      <SelectItem value="Manajemen">Manajemen</SelectItem>
-                      <SelectItem value="Akuntansi">Akuntansi</SelectItem>
-                    </SelectContent>
-                  </Select>
+              <div className="flex justify-between gap-3">
+                <div className="space-y-2 flex-1">
+                  <Label>Fakultas (Opsional)</Label>
+                  <Input
+                    placeholder="Masukkan nama fakultas"
+                    value={newUser.fakultas}
+                    onChange={(e) =>
+                      setNewUser(prev => ({ ...prev, fakultas: e.target.value }))
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2 flex-1">
+                  <Label>Prodi (Opsional)</Label>
+                  <Input
+                    placeholder="Masukkan nama prodi`"
+                    value={newUser.prodi}
+                    onChange={(e) =>
+                      setNewUser(prev => ({ ...prev, prodi: e.target.value }))
+                    }
+                  />
                 </div>
               </div>
 
+              {/* PASSWORD */}
+              <div className="flex justify-between gap-3">
+                <div className="space-y-2 flex-1">
+                  <Label>Password *</Label>
+                  <Input
+                    type="password"
+                    placeholder="Minimal 8 karakter"
+                    value={newUser.password1}
+                    onChange={(e) =>
+                      setNewUser(prev => ({ ...prev, password1: e.target.value }))
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2 flex-1">
+                  <Label>Konfirmasi Password *</Label>
+                  <Input
+                    type="password"
+                    placeholder="Ulangi password"
+                    value={newUser.password2}
+                    onChange={(e) =>
+                      setNewUser(prev => ({ ...prev, password2: e.target.value }))
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* ACTION BUTTON */}
               <div className="flex justify-end space-x-2 pt-4">
-                <Button variant="outline" onClick={() => setIsAddUserOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsAddUserOpen(false)}
+                >
                   Batal
                 </Button>
                 <Button onClick={handleAddUser}>
@@ -299,7 +276,7 @@ const UserManagement = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Pengguna</p>
-                <p className="text-3xl font-bold text-primary">{users.length}</p>
+                <p className="text-3xl font-bold text-primary">220</p>
               </div>
               <User className="h-8 w-8 text-primary" />
             </div>
@@ -310,8 +287,8 @@ const UserManagement = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Mahasiswa</p>
-                <p className="text-3xl font-bold text-blue-500">{users.filter(u => u.role === 'student').length}</p>
+                <p className="text-sm font-medium text-muted-foreground">User</p>
+                <p className="text-3xl font-bold text-blue-500">200</p>
               </div>
               <GraduationCap className="h-8 w-8 text-blue-500" />
             </div>
@@ -322,8 +299,8 @@ const UserManagement = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Dosen</p>
-                <p className="text-3xl font-bold text-green-500">{users.filter(u => u.role === 'lecturer').length}</p>
+                <p className="text-sm font-medium text-muted-foreground">Staf</p>
+                <p className="text-3xl font-bold text-green-500">15</p>
               </div>
               <BookOpen className="h-8 w-8 text-green-500" />
             </div>
@@ -335,7 +312,7 @@ const UserManagement = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Pengguna Aktif</p>
-                <p className="text-3xl font-bold text-success">{users.filter(u => u.status === 'active').length}</p>
+                <p className="text-3xl font-bold text-success">4</p>
               </div>
               <Shield className="h-8 w-8 text-success" />
             </div>
@@ -360,8 +337,6 @@ const UserManagement = () => {
                 <Input
                   id="search"
                   placeholder="Nama atau email..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
               </div>
@@ -369,14 +344,14 @@ const UserManagement = () => {
 
             <div className="space-y-2">
               <Label htmlFor="role-filter">Filter Role</Label>
-              <Select value={filterRole} onValueChange={setFilterRole}>
+              <Select>
                 <SelectTrigger>
                   <SelectValue placeholder="Semua role" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">Semua Role</SelectItem>
-                  <SelectItem value="student">Mahasiswa</SelectItem>
-                  <SelectItem value="lecturer">Dosen</SelectItem>
+                  <SelectItem value="student">User</SelectItem>
+                  <SelectItem value="lecturer">Staf</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
@@ -385,10 +360,6 @@ const UserManagement = () => {
             <div className="flex items-end">
               <Button 
                 variant="outline" 
-                onClick={() => {
-                  setSearchTerm("");
-                  setFilterRole("");
-                }}
                 className="w-full"
               >
                 Reset Filter
@@ -404,7 +375,7 @@ const UserManagement = () => {
           <CardTitle className="flex items-center justify-between">
             <span className="flex items-center">
               <User className="h-5 w-5 mr-2 text-primary" />
-              Daftar Pengguna ({filteredUsers.length})
+              Daftar Pengguna
             </span>
           </CardTitle>
         </CardHeader>
@@ -423,89 +394,16 @@ const UserManagement = () => {
                   <th className="text-center py-3 px-4">Aksi</th>
                 </tr>
               </thead>
-              <tbody>
-                {filteredUsers.map((user) => (
-                  <tr key={user.id} className="border-b hover:bg-muted/50 transition-colors">
-                    <td className="py-3 px-4">
-                      <div className="flex items-center">
-                        <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center mr-3">
-                          <User className="h-4 w-4 text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-medium">{user.name}</p>
-                          <p className="text-sm text-muted-foreground flex items-center">
-                            <Phone className="h-3 w-3 mr-1" />
-                            {user.phone}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center">
-                        <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
-                        {user.email}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      {getRoleBadge(user.role)}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="font-mono text-sm">
-                        {user.role === 'student' ? user.studentId : user.employeeId}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      {user.department}
-                    </td>
-                    <td className="py-3 px-4">
-                      {getStatusBadge(user.status)}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="text-sm text-muted-foreground">
-                        {new Date(user.lastLogin).toLocaleDateString('id-ID')}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleToggleStatus(user.id, user.name, user.status)}>
-                            <Shield className="h-4 w-4 mr-2" />
-                            {user.status === 'active' ? 'Nonaktifkan' : 'Aktifkan'}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            className="text-destructive"
-                            onClick={() => handleDeleteUser(user.id, user.name)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Hapus
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
             </table>
           </div>
 
-          {filteredUsers.length === 0 && (
-            <div className="text-center py-8">
-              <User className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">Tidak ada pengguna ditemukan</h3>
-              <p className="text-muted-foreground">
-                Coba ubah filter pencarian Anda
-              </p>
-            </div>
-          )}
+          <div className="text-center py-8">
+            <User className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium mb-2">API Masih Dalam Pengembangan</h3>
+            <p className="text-muted-foreground">
+              Bagi Admin Bisa Kunjungi https://sirsakapi.teknohole.com/admin/
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

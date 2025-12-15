@@ -219,7 +219,7 @@ const RoomSearch = () => {
       )}
 
       {/* PAGINATION */}
-      <div className="flex justify-between pt-6">
+      <div className="flex items-center justify-between pt-6">
         <Button
           variant="outline"
           disabled={!pagination.previous}
@@ -229,7 +229,8 @@ const RoomSearch = () => {
         </Button>
 
         <span className="text-sm text-muted-foreground">
-          Halaman {pagination.page}
+          Halaman {pagination.page} dari{" "}
+          {Math.ceil(pagination.count / 10 || 1)}
         </span>
 
         <Button

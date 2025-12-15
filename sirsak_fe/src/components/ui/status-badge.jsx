@@ -8,7 +8,7 @@ export function StatusBadge({  status, className  }) {
     occupied: "bg-room-occupied text-white", 
     pending: "bg-room-pending text-white",
     approved: "bg-success text-success-foreground",
-    rejected: "bg-destructive text-destructive-foreground",
+    declined: "bg-destructive text-destructive-foreground",
     maintenance: "bg-warning text-warning-foreground",
   };
 
@@ -17,7 +17,7 @@ export function StatusBadge({  status, className  }) {
     occupied: "Terisi",
     pending: "Pending",
     approved: "Disetujui", 
-    rejected: "Ditolak",
+    declined: "Ditolak",
     maintenance: "Maintenance",
   };
 

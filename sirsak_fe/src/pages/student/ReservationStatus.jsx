@@ -63,10 +63,10 @@ const ReservationStatus = () => {
       await api.delete(`/reservations/${id}/`);
 
       setReservations((prev) => prev.filter((r) => r.id !== id));
-      alert("Reservasi berhasil dibatalkan ✅");
+      alert("Reservasi berhasil dibatalkan");
     } catch (err) {
       console.error("Error:", err);
-      alert("Gagal membatalkan reservasi ❌");
+      alert("Gagal membatalkan reservasi");
     }
   };
 
@@ -174,7 +174,7 @@ const ReservationStatus = () => {
           </Card>
         ))}
 
-        <div className="flex justify-between items-center mt-4">
+        <div className="flex justify-between items-center mt-6">
           <Button
             variant="outline"
             disabled={!pagination.previous}
@@ -184,7 +184,8 @@ const ReservationStatus = () => {
           </Button>
 
           <span className="text-sm text-muted-foreground">
-            Halaman {pagination.page}
+            Halaman {pagination.page} dari{" "}
+            {Math.ceil(pagination.count / 10 || 1)}
           </span>
 
           <Button

@@ -1,345 +1,277 @@
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { 
+import {
   Calendar,
-  FileText,
-  Users,
   MapPin,
   TrendingUp,
   Star,
   AlertCircle,
-  CheckCircle,
-  BarChart3,
-  Settings,
-  ArrowRight,
-  Bell
 } from "lucide-react";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { useNavigate } from "react-router-dom";
+import api from "@/lib/axiosInstance"; // axios instance
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const user = localStorage.getItem("username");
 
-  // Mock statistics data
-  const [stats] = useState({
-    totalRooms: 24,
-    totalReservations: 156,
-    pendingApprovals: 8,
-    activeReservations: 12,
-    monthlyUsage: 89.2,
-    averageRating: 4.7,
-    feedbackCount: 234
+  const [stats, setStats] = useState({
+    totalRooms: 0,
+    totalReservations: 0,
+    pendingApprovals: 0,
+    activeReservations: 0,
   });
 
-  // Mock recent feedback
-  const [recentFeedback] = useState([
-    {
-      id: 2,
-      room: "Lab Komputer 1",
-      user: "Ahmad Rizki",
-      rating: 5,
-      comment: "Fasilitas sangat baik dan lengkap",
-      date: "2024-01-19"
-    },
-    {
-      id: 3,
-      room: "Ruang Seminar A",
-      user: "Siti Nurhaliza", 
-      rating: 3,
-      comment: "Sound system perlu diperbaiki",
-      date: "2024-01-19"
-    },
-    {
-      id: 4,
-      room: "Lab Multimedia",
-      user: "Budi Santoso",
-      rating: 4,
-      comment: "Software editing lengkap dan update",
-      date: "2024-01-18"
-    }
-  ]);
+  const [recentReservations, setRecentReservations] = useState([]);
+  const [recentFeedback, setRecentFeedback] = useState([]);
 
-  // Mock room usage data
-  const [topRooms] = useState([
-    { room: "Lab Komputer 1", usage: "85%", reservations: 42 },
-    { room: "Ruang Seminar A", usage: "73%", reservations: 35 },
-    { room: "Lab Multimedia", usage: "68%", reservations: 29 },
-    { room: "Ruang Kelas 301", usage: "61%", reservations: 26 },
-    { room: "Lab Komputer 2", usage: "55%", reservations: 22 }
-  ]);
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
 
-  const renderStars = (rating) => {
-    return Array.from({ length: 5 }, (_, index) => (
-      <Star
-        key={index}
-        className={`h-4 w-4 ${
-          index < rating ? 'text-warning fill-warning' : 'text-muted-foreground'
-        }`}
-      />
-    ));
+  const getLatestData = ({
+    data = [],
+    dateKey = "created_at",
+    limit = 3,
+  }) => {
+    if (!Array.isArray(data)) return [];
+
+    return [...data]
+      .sort(
+        (a, b) =>
+          new Date(b[dateKey]) - new Date(a[dateKey])
+      )
+      .slice(0, limit);
   };
+
+  const fetchAllPages = async (endpoint) => {
+    let allData = [];
+    let page = 1;
+    let hasNext = true;
+
+    while (hasNext) {
+      const res = await api.get(endpoint, {
+        params: { page },
+      });
+
+      allData = allData.concat(res.data.results);
+      hasNext = !!res.data.next;
+      page++;
+    }
+
+    return allData;
+  };
+
+  const fetchDashboardData = async () => {
+    try {
+      const [roomsRes, reservationsRes, feedbackRes] = await Promise.all([
+        fetchAllPages("/rooms/"),
+        fetchAllPages("/reservations/"),
+        fetchAllPages("/feedback/"),
+      ]);
+
+      const rooms = roomsRes;
+      const reservations = reservationsRes;
+      const feedbacks = feedbackRes;
+
+      // ================= STATISTICS =================
+      const pending = reservations.filter(
+        (r) => r.status === "PENDING"
+      ).length;
+
+      const active = reservations.filter(
+        (r) => r.status === "active"
+      ).length;
+
+      setStats({
+        totalRooms: rooms.length,
+        totalReservations: reservations.length,
+        pendingApprovals: pending,
+        activeReservations: active,
+      });
+      
+      // ================= RECENT FEEDBACK =================
+      const recentFeedback = getLatestData({
+        data: feedbacks,
+        dateKey: "created_at",
+        limit: 4,
+      });
+
+      setRecentFeedback(recentFeedback);
+
+      const recentReservations = getLatestData({
+        data: reservations,
+        dateKey: "created_at",
+        limit: 5,
+      });
+
+      setRecentReservations(recentReservations);
+    } catch (error) {
+      console.error("Gagal mengambil data dashboard:", error);
+    }
+  };
+
+  const StarRating = ({ rating }) => (
+    <div>
+      <div className="flex gap-1">
+        {[1, 2, 3, 4, 5].map((s) => (
+          <button
+            key={s}
+            className={s <= rating ? "text-yellow-500" : "text-gray-300"}
+          >
+            <Star className="h-6 w-6 fill-current" />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 
   return (
     <div className="p-6 animate-fade-in">
-      {/* Page Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-foreground">Dashboard Admin</h1>
-        <p className="text-muted-foreground mt-1">Selamat datang, Admin Sistem Ruangan</p>
+        <h1 className="text-3xl font-bold">Dashboard Admin</h1>
+        <p className="text-muted-foreground mt-1">
+          Selamat datang, Staff {user}
+        </p>
       </div>
-      
-      <div className="space-y-8">
-        {/* Main Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card className="shadow-soft hover:shadow-medium transition-all hover-scale">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total Ruangan</p>
-                  <p className="text-3xl font-bold text-primary">{stats.totalRooms}</p>
-                </div>
-                <MapPin className="h-8 w-8 text-primary" />
-              </div>
-            </CardContent>
-          </Card>
 
-          <Card className="shadow-soft hover:shadow-medium transition-all hover-scale">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total Reservasi</p>
-                  <p className="text-3xl font-bold text-info">{stats.totalReservations}</p>
-                </div>
-                <Calendar className="h-8 w-8 text-info" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-soft hover:shadow-medium transition-all hover-scale">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Pending Approval</p>
-                  <p className="text-3xl font-bold text-warning">{stats.pendingApprovals}</p>
-                </div>
-                <AlertCircle className="h-8 w-8 text-warning" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-soft hover:shadow-medium transition-all hover-scale">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Rating Rata-rata</p>
-                  <p className="text-3xl font-bold text-success">{stats.averageRating}</p>
-                </div>
-                <Star className="h-8 w-8 text-success" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Quick Actions */}
-        <Card className="shadow-soft hover:shadow-medium transition-all" style={{animationDelay: '0.2s'}}>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <ArrowRight className="h-5 w-5 mr-2 text-primary" />
-              Aksi Cepat
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Button 
-                className="h-20 text-left justify-start hover-scale"
-                onClick={() => navigate("/admin/users")}
-              >
-                <div className="flex items-center">
-                  <Users className="h-6 w-6 mr-3" />
-                  <div>
-                    <p className="font-medium">Kelola Pengguna</p>
-                    <p className="text-sm opacity-80">Manajemen user sistem</p>
-                  </div>
-                </div>
-              </Button>
-
-              <Button 
-                variant="outline"
-                className="h-20 text-left justify-start hover-scale"
-                onClick={() => navigate("/admin/rooms")}
-              >
-                <div className="flex items-center">
-                  <MapPin className="h-6 w-6 mr-3" />
-                  <div>
-                    <p className="font-medium">Kelola Ruangan</p>
-                    <p className="text-sm opacity-80">CRUD data ruangan</p>
-                  </div>
-                </div>
-              </Button>
-
-              <Button
-                variant="outline"
-                className="h-20 text-left justify-start hover-scale"
-                onClick={() => navigate("/admin/approvals")}
-              >
-                <div className="flex items-center">
-                  <CheckCircle className="h-6 w-6 mr-3" />
-                  <div>
-                    <p className="font-medium">Persetujuan Akhir</p>
-                    <p className="text-sm opacity-80">Validasi reservasi</p>
-                  </div>
-                </div>
-              </Button>
-
-              <Button 
-                variant="outline"
-                className="h-20 text-left justify-start hover-scale"
-                onClick={() => navigate("/admin/reports")}
-              >
-                <div className="flex items-center">
-                  <BarChart3 className="h-6 w-6 mr-3" />
-                  <div>
-                    <p className="font-medium">Laporan</p>
-                    <p className="text-sm opacity-80">Statistik penggunaan</p>
-                  </div>
-                </div>
-              </Button>
-
-              <Button 
-                variant="outline"
-                className="h-20 text-left justify-start hover-scale"
-                onClick={() => navigate("/admin/feedback")}
-              >
-                <div className="flex items-center">
-                  <Star className="h-6 w-6 mr-3" />
-                  <div>
-                    <p className="font-medium">Feedback</p>
-                    <p className="text-sm opacity-80">Review pengguna</p>
-                  </div>
-                </div>
-              </Button>
+      {/* STAT CARDS */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+          <CardContent className="p-6 flex justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">
+                Total Ruangan
+              </p>
+              <p className="text-3xl font-bold text-primary">
+                {stats.totalRooms}
+              </p>
             </div>
+            <MapPin className="h-8 w-8 text-primary" />
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Usage Statistics */}
-          <Card className="shadow-soft animate-fade-in" style={{animationDelay: '0.3s'}}>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span className="flex items-center">
-                  <TrendingUp className="h-5 w-5 mr-2 text-primary" />
-                  Ruangan Populer
-                </span>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => navigate("/admin/reports")}
-                >
-                  Detail
-                </Button>
-              </CardTitle>
-              <CardDescription>
-                Top 5 ruangan dengan tingkat penggunaan tertinggi
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {topRooms.map((room, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 text-primary text-sm font-medium flex items-center justify-center mr-3">
-                        {index + 1}
-                      </div>
-                      <div>
-                        <p className="font-medium">{room.room}</p>
-                        <p className="text-sm text-muted-foreground">{room.reservations} reservasi</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium text-primary">{room.usage}</p>
-                      <div className="w-20 h-2 bg-muted rounded-full mt-1">
-                        <div 
-                          className="h-full bg-primary rounded-full"
-                          style={{ width: room.usage }}
-                        ></div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+        <Card>
+          <CardContent className="p-6 flex justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">
+                Total Reservasi
+              </p>
+              <p className="text-3xl font-bold text-info">
+                {stats.totalReservations}
+              </p>
+            </div>
+            <Calendar className="h-8 w-8 text-info" />
+          </CardContent>
+        </Card>
 
-          {/* Recent Feedback */}
-          <Card className="shadow-soft animate-fade-in" style={{animationDelay: '0.4s'}}>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span className="flex items-center">
-                  <Star className="h-5 w-5 mr-2 text-warning" />
-                  Feedback Terbaru
-                </span>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => navigate("/admin/feedback")}
-                >
-                  Lihat Semua
-                </Button>
-              </CardTitle>
-              <CardDescription>
-                Umpan balik terbaru dari pengguna ruangan
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentFeedback.map((feedback) => (
-                  <div key={feedback.id} className="p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <p className="font-medium">{feedback.room}</p>
-                        <p className="text-sm text-muted-foreground">{feedback.user}</p>
-                      </div>
-                      <div className="flex items-center">
-                        {renderStars(feedback.rating)}
-                      </div>
-                    </div>
-                    <p className="text-sm">{feedback.comment}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(feedback.date).toLocaleDateString('id-ID')}
+        <Card>
+          <CardContent className="p-6 flex justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">
+                Persetujuan Tertunda
+              </p>
+              <p className="text-3xl font-bold text-warning">
+                {stats.pendingApprovals}
+              </p>
+            </div>
+            <AlertCircle className="h-8 w-8 text-warning" />
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+        {/* TOP ROOMS */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex justify-between">
+              <span className="flex items-center">
+                <TrendingUp className="h-5 w-5 mr-2" />
+                Reservasi Aktif Hari Ini
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/admin/approvals")}
+              >
+                Detail
+              </Button>
+            </CardTitle>
+            <p className="text-[13px]">Daftar pengajuan reservasi yang masih dalam status pending</p>
+          </CardHeader>
+
+          <CardContent className="space-y-4">
+            {recentReservations.filter((res) => res.status === "PENDING").map((res) => (
+              <div
+                key={res.id}
+                className="flex justify-between p-3 border rounded-lg"
+              >
+                <div>
+                  <p className="font-medium mt-1 mb-2">{res.room_name}</p>
+                  <p className="font-medium mb-3">{res.requester_name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    <span>{res.start.split("T")[0]}</span>
+                  </p>
+                </div>
+                <div className="flex items-center">
+                <StatusBadge status={res.status.toLowerCase()} />
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* FEEDBACK */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex justify-between">
+              <span className="flex items-center">
+                <Star className="h-5 w-5 mr-2 text-warning" />
+                Feedback Terbaru
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/admin/management/feedback")}
+              >
+                Lihat Semua
+              </Button>
+            </CardTitle>
+            <p className="text-[13px]">Feedback terbaru dari pengguna ruangan</p>
+          </CardHeader>
+
+          <CardContent className="space-y-4">
+            {recentFeedback.map((fb) => (
+              <div
+                key={fb.id}
+                className="p-3 border rounded-lg"
+              >
+                <div className="flex justify-between mb-1">
+                  <div>
+                    <p className="font-medium">{fb.reservation_room}</p>
+                    <p className="text-sm text-muted-foreground">
+                      dipinjam oleh: {fb.user_name}
                     </p>
                   </div>
-                ))}
+                  <StarRating
+                    rating={fb.rating}
+                  />
+                </div>
+                <p className="text-sm font-medium mt-2">"{fb.text}"</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  ({new Date(fb.created_at).toLocaleDateString(
+                    "id-ID"
+                  )})
+                </p>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Usage Overview */}
-        <Card className="shadow-soft animate-fade-in" style={{animationDelay: '0.5s'}}>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <BarChart3 className="h-5 w-5 mr-2 text-primary" />
-              Ringkasan Penggunaan
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="text-center p-6 border rounded-lg">
-                <div className="text-3xl font-bold text-primary mb-2">{stats.monthlyUsage}%</div>
-                <p className="text-sm text-muted-foreground">Tingkat Okupansi Bulanan</p>
-              </div>
-              
-              <div className="text-center p-6 border rounded-lg">
-                <div className="text-3xl font-bold text-success mb-2">{stats.activeReservations}</div>
-                <p className="text-sm text-muted-foreground">Reservasi Aktif Hari Ini</p>
-              </div>
-              
-              <div className="text-center p-6 border rounded-lg">
-                <div className="text-3xl font-bold text-info mb-2">{stats.feedbackCount}</div>
-                <p className="text-sm text-muted-foreground">Total Feedback Masuk</p>
-              </div>
-            </div>
+            ))}
           </CardContent>
         </Card>
       </div>
@@ -348,5 +280,3 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
-
-

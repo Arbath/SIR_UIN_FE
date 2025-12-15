@@ -43,9 +43,15 @@ const ReservationForm = () => {
   const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
+  const [unavailableSlots, setUnavailableSlots] = useState([]);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
 
-  const start = date && startTime ? `${date}T${startTime}` : "";
-  const end = date && endTime ? `${date}T${endTime}` : "";
+  const toUTCISOString = (date, time) => {
+    const localDate = new Date(`${date}T${time}:00`);
+    return localDate.toISOString();
+  };
+  const start = date && startTime ? toUTCISOString(date, startTime) : "";
+  const end = date && endTime ? toUTCISOString(date, endTime) : "";
 
   // ================= ROOM STATE =================
   const [rooms, setRooms] = useState([]);
@@ -100,6 +106,15 @@ const ReservationForm = () => {
     }
   }, [roomIdFromQuery]);
 
+  useEffect(() => {
+    if (formData.room && date) {
+      setStartTime("");
+      setEndTime("");
+      checkRoomAvailability(formData.room, date);
+    }
+  }, [formData.room, date]);
+
+
   // ================= FETCH ROOMS =================
   const fetchRooms = async (page = 1) => {
     setLoadingRooms(true);
@@ -131,6 +146,18 @@ const ReservationForm = () => {
     }
   };
 
+  const handleNextPage = () => {
+    if (pagination.next) {
+      fetchRooms(pagination.page + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (pagination.previous) {
+      fetchRooms(pagination.page - 1);
+    }
+  };
+
   // ================= FORM HANDLER =================
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({
@@ -146,6 +173,16 @@ const ReservationForm = () => {
     if (!formData.room || !start || !end || !formData.purpose || !formData.requested_capacity) {
       toast({
         title: "Mohon lengkapi semua field",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const isAvailable = await validateFinalAvailability();
+    if (!isAvailable) {
+      toast({
+        title: "Waktu sudah terisi",
+        description: "Silakan pilih jam lain",
         variant: "destructive",
       });
       return;
@@ -169,7 +206,7 @@ const ReservationForm = () => {
         variant: "success",
       });
 
-      navigate(`/${role}/status`);
+      navigate(`/${role}/dashboard`);
     } catch (err) {
       console.error("Gagal reservasi:", err);
       toast({
@@ -178,6 +215,61 @@ const ReservationForm = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const checkRoomAvailability = async (roomId, date) => {
+    if (!roomId || !date) return;
+
+    setCheckingAvailability(true);
+
+    try {
+      const results = await Promise.all(
+        timeOptions.map(async (time, index) => {
+          if (!timeOptions[index + 1]) return null;
+
+          const start = toUTCISOString(date, time);
+          const end = toUTCISOString(date, timeOptions[index + 1]);
+
+          try {
+            const res = await api.get(
+              `/rooms/${roomId}/availability`,
+              { params: { start, end } }
+            );
+
+            return res.data.available ? null : time;
+          } catch {
+            return time; // anggap unavailable jika error
+          }
+        })
+      );
+
+      setUnavailableSlots(results.filter(Boolean));
+    } finally {
+      setCheckingAvailability(false);
+    }
+  };
+
+  const isEndTimeDisabled = (end) => {
+    const startIndex = timeOptions.indexOf(startTime);
+    const endIndex = timeOptions.indexOf(end);
+
+    return timeOptions
+      .slice(startIndex, endIndex)
+      .some((t) => unavailableSlots.includes(t));
+  };
+
+  const validateFinalAvailability = async () => {
+    const res = await api.get(
+      `/rooms/${formData.room}/availability`,
+      {
+        params: {
+          start: toUTCISOString(date, startTime),
+          end: toUTCISOString(date, endTime),
+        },
+      }
+    );
+
+    return res.data.available;
   };
 
   return (
@@ -273,8 +365,37 @@ const ReservationForm = () => {
                 ))}
               </div>
             )}
+
+            {/* PAGINATION */}
+            {pagination.count > 0 && (
+              <div className="flex items-center justify-between mt-6">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePrevPage}
+                  disabled={!pagination.previous}
+                >
+                  Sebelumnya
+                </Button>
+
+                <p className="text-sm text-muted-foreground">
+                  Halaman {pagination.page} dari{" "}
+                  {Math.ceil(pagination.count / rooms.length || 1)}
+                </p>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNextPage}
+                  disabled={!pagination.next}
+                >
+                  Berikutnya
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
+        
       )}
 
       {/* Selected room info */}
@@ -319,10 +440,20 @@ const ReservationForm = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label>Waktu Mulai</Label>
-                  <select className="w-full border rounded-md h-10 px-3" value={startTime} onChange={(e) => setStartTime(e.target.value)}>
+                  <select
+                    className="w-full border rounded-md h-10 px-3"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                  >
                     <option value="">Pilih jam</option>
                     {timeOptions.map((t) => (
-                      <option key={t} value={t}>{t}</option>
+                      <option
+                        key={t}
+                        value={t}
+                        disabled={unavailableSlots.includes(t)}
+                      >
+                        {t} {unavailableSlots.includes(t) ? "(Tidak tersedia)" : ""}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -335,9 +466,17 @@ const ReservationForm = () => {
                     onChange={(e) => setEndTime(e.target.value)}
                   >
                     <option value="">Pilih jam</option>
-                    {timeOptions.filter((t) => t > startTime).map((t) => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
+                    {timeOptions
+                      .filter((t) => t > startTime)
+                      .map((t) => (
+                        <option
+                          key={t}
+                          value={t}
+                          disabled={isEndTimeDisabled(t)}
+                        >
+                          {t}
+                        </option>
+                      ))}
                   </select>
                 </div>
               </div>
@@ -351,9 +490,13 @@ const ReservationForm = () => {
                 />
               </div>
 
-              <Button type="submit" className="w-full">
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={checkingAvailability}
+              >
                 <Send className="h-4 w-4 mr-2" />
-                Ajukan Reservasi
+                {checkingAvailability ? "Memeriksa ketersediaan..." : "Ajukan Reservasi"}
               </Button>
             </form>
           </CardContent>

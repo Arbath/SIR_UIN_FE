@@ -62,13 +62,16 @@ const App = () => (
             <Route path="/user/reserve" element={<ReservationForm />} />
             <Route path="/user/status" element={<ReservationStatus />} />
             <Route path="/user/feedback" element={<Feedback />} />
-            <Route path="/admin/dashboard" element={<FacultyDashboard />} />
-            <Route path="/admin/approvals" element={<ApprovalReservations />} />
-            <Route path="/admin/schedule" element={<ScheduleReservations />} />
-            <Route path="/superadmin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/approvals" element={<FinalApproval />} />
+            <Route path="/admin/management/rooms" element={<RoomManagement />} />
+            <Route path="/admin/management/users" element={<UserManagement />} />
+            <Route path="/admin/reserve" element={<ReservationForm />} />
+            <Route path="/admin/management/feedback" element={<NotFound />} />
+            {/* <Route path="/superadmin/dashboard" element={<AdminDashboard />} />
             <Route path="/superadmin/rooms" element={<RoomManagement />} />
             <Route path="/superadmin/users" element={<UserManagement />} />
-            <Route path="/superadmin/approvals" element={<FinalApproval />} />
+            <Route path="/superadmin/approvals" element={<FinalApproval />} /> */}
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
