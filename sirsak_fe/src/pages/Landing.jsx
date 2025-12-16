@@ -1,15 +1,35 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Building2, Users, CalendarCheck, Star, Search, ArrowRight } from "lucide-react";
+import { Building2, Users, CalendarCheck, Star, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Label } from "@/components/ui/label";
 import heroImg from "@/assets/university-hero.jpg";
 
 export default function LandingPage() {
   const navigate = useNavigate();
   const [active, setActive] = useState("beranda");
+  const [showLogin, setShowLogin] = useState(false);
+  const [loginData, setLoginData] = useState({
+    username: "",
+    password: "",
+  });
+
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+
+    if (showLogin) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = originalOverflow || "auto";
+    }
+
+    return () => {
+      document.body.style.overflow = originalOverflow || "auto";
+    };
+  }, [showLogin]);
 
   useEffect(() => {
     const ids = ["beranda", "tentang", "fitur", "testimoni"];
@@ -29,144 +49,237 @@ export default function LandingPage() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setLoginData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch("https://sirsakapi.teknohole.com/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(loginData),
+      });
+
+      if (!res.ok) throw new Error();
+
+      const data = await res.json();
+
+      localStorage.setItem("username", data.user.username);
+      localStorage.setItem("id", data.user.id);
+      localStorage.setItem("email", data.user.email);
+      localStorage.setItem("access_token", data.access);
+      localStorage.setItem("refresh_token", data.refresh);
+      localStorage.setItem("role", data.user.role);
+
+      navigate(`/${data.user.role}/dashboard`);
+    } catch {
+      alert("Login gagal. Periksa username atau password.");
+    }
+  };
+
   return (
-    <div className="bg-background text-foreground">
-      {/* HEADER */}
-      <header className="fixed top-0 inset-x-0 z-50 bg-black/30 backdrop-blur">
-        <div className="container mx-auto h-16 px-4 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-white font-bold">
-            <img src="/sirsak.png" className="w-6 h-6" /> SIRSAK
-          </div>
-          <nav className="hidden md:flex gap-6 text-sm text-white">
-            {["beranda", "tentang", "fitur", "testimoni"].map((id) => (
-              <a
-                key={id}
-                href={`#${id}`}
-                className={active === id ? "font-semibold" : "opacity-80 hover:opacity-100"}
-              >
-                {id.charAt(0).toUpperCase() + id.slice(1)}
-              </a>
-            ))}
-          </nav>
-          <Button size="sm" className="bg-emerald-700" onClick={() => navigate("/login")}>
-            Masuk
-          </Button>
-        </div>
-      </header>
+    <>
+      {showLogin && (
+        <section
+          className={`fixed inset-0 z-50 flex items-center justify-center bg-background transition-all duration-700
+            ${showLogin ? "opacity-100" : "opacity-0 pointer-events-none"}
+          `}
+        >
+          <Card className="w-full max-w-md shadow-2xl">
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl">Login</CardTitle>
+              <CardDescription>Masuk ke sistem</CardDescription>
+            </CardHeader>
 
-      {/* HERO */}
-      <section
-        id="beranda"
-        className="relative min-h-screen flex items-center"
-        style={{
-          backgroundImage: `url(${heroImg})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
-      >
-        <div className="absolute inset-0 bg-black/60" />
-        <div className="relative z-10 container mx-auto px-4 text-white">
-          <div className="max-w-3xl">
-            <h1 className="text-4xl md:text-5xl font-bold">
-              Jadwal <span className="text-[#4880FF]">Bentrok?</span>
-              <br />
-              Reservasi Sekarang
-            </h1>
+            <CardContent>
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Username</Label>
+                  <Input
+                    name="username"
+                    value={loginData.username}
+                    onChange={handleChange}
+                  />
+                </div>
 
-            <p className="mt-4 opacity-90 max-w-[520px]">
-              Solusi untuk anda yang sering menghadapi permasalahan ruangan yang
-              tidak sesuai dengan jadwal yang direncanakan.
-            </p>
+                <div className="space-y-2">
+                  <Label>Password</Label>
+                  <Input
+                    type="password"
+                    name="password"
+                    value={loginData.password}
+                    onChange={handleChange}
+                  />
+                </div>
 
-            {/* CTA */}
-            <div className="mt-8">
+                <Button type="submit" className="w-full">
+                  Masuk
+                </Button>
+              </form>
+
               <Button
-                size="lg"
-                className="bg-emerald-700 hover:bg-emerald-800 px-8 py-6 text-lg rounded-xl shadow-lg"
-                onClick={() => navigate("/login")}
+                variant="ghost"
+                className="w-full mt-4 flex gap-2"
+                onClick={() => setShowLogin(false)}
               >
-                Mulai Reservasi
+              <ArrowLeft className="h-4 w-4" />
+                Kembali ke Landing
+              </Button>
+            </CardContent>
+          </Card>
+        </section>
+      )}
+      <main
+        className={`transition-all duration-700 ease-in-out overflow-hidden
+          ${showLogin ? "max-h-0 opacity-0 pointer-events-none" : "max-h-[5000px] opacity-100"}
+        `}
+      >
+        <div className="bg-background text-foreground">
+          {/* HEADER */}
+          <header className="fixed top-0 inset-x-0 z-50 bg-black/30 backdrop-blur">
+            <div className="container mx-auto h-16 px-4 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-white font-bold">
+                <img src="/sirsak.png" className="w-6 h-6" /> SIRSAK
+              </div>
+              <nav className="hidden md:flex gap-6 text-sm text-white">
+                {["beranda", "tentang", "fitur", "testimoni"].map((id) => (
+                  <a
+                    key={id}
+                    href={`#${id}`}
+                    className={active === id ? "font-semibold" : "opacity-80 hover:opacity-100"}
+                  >
+                    {id.charAt(0).toUpperCase() + id.slice(1)}
+                  </a>
+                ))}
+              </nav>
+              <Button
+                size="sm"
+                className="bg-emerald-700"
+                onClick={() => setShowLogin(true)}
+              >
+                Masuk
               </Button>
             </div>
-          </div>
-        </div>
+          </header>
 
-        {/* STATS */}
-        <div className="absolute bottom-0 left-0 right-0 translate-y-1/2 z-20">
-          <div className="container mx-auto px-4">
-            <div className="bg-white rounded-2xl shadow-xl grid grid-cols-2 md:grid-cols-4 gap-6 p-6 text-center">
-              <Stat icon={<Users className="mx-auto text-emerald-600" />} value="200+" label="Pengguna Aktif" />
-              <Stat icon={<Building2 className="mx-auto text-emerald-600" />} value="40+" label="Ruangan Tersedia" />
-              <Stat icon={<CalendarCheck className="mx-auto text-emerald-600" />} value="100+" label="Reservasi/Bulan" />
-              <Stat icon={<Star className="mx-auto text-emerald-600" />} value="88%" label="Kepuasan" />
+          {/* HERO */}
+          <section
+            id="beranda"
+            className="relative min-h-screen flex items-center"
+            style={{
+              backgroundImage: `url(${heroImg})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+          >
+            <div className="absolute inset-0 bg-black/60" />
+            <div className="relative z-10 container mx-auto px-4 text-white">
+              <div className="max-w-3xl">
+                <h1 className="text-4xl md:text-5xl font-bold">
+                  Jadwal <span className="text-[#4880FF]">Bentrok?</span>
+                  <br />
+                  Reservasi Sekarang
+                </h1>
+
+                <p className="mt-4 opacity-90 max-w-[520px]">
+                  Solusi untuk anda yang sering menghadapi permasalahan ruangan yang
+                  tidak sesuai dengan jadwal yang direncanakan.
+                </p>
+
+                {/* CTA */}
+                <div className="mt-8">
+                  <Button
+                    size="lg"
+                    className="bg-emerald-700 hover:bg-emerald-800 px-8 py-6 text-lg rounded-xl shadow-lg"
+                    onClick={() => setShowLogin(true)}
+                  >
+                    Mulai Reservasi
+                  </Button>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      </section>
-      <div className="h-32 md:h-24 bg-[#f4f5f6]" />
 
-      {/* TENTANG */}
-      <section id="tentang" className="py-24 bg-muted">
-        <div className="container mx-auto px-4 grid md:grid-cols-2 gap-12 items-center">
-          <div className="ml-[110px]">
-            <h2 className="text-3xl font-bold mb-4">Apa Itu <span className="text-[#4880FF]">SIRSAK</span>?</h2>
-            <p className="mb-6 max-w-[600px]">
-              <span className="font-bold">SIRSAK (Sistem Informasi Ruangan Sunan Kalijaga)</span> adalah platform digital yang dirancang khusus untuk mengatasi permasalahan pengelolaan ruangan di UIN Sunan Kalijaga.
-            </p>
-            <p className="mb-1 max-w-[600px]">Pengelolaan ruangan di kampus yang masih dilakukan secara manual sering menyebabkan berbagai masalah seperti:</p>
-            <ul className="list-disc ml-5 text-black space-y-1">
-              <li>Jadwal bentrok</li>
-              <li>Ruangan tidak tersedia</li>
-              <li>Perubahan mendadak</li>
-            </ul>
-            <p className="mt-6 max-w-[600px]"><span className="font-bold">SIRSAK</span> hadir sebagai solusi modern untuk mengoptimalkan penggunaan ruangan kampus.</p>
-          </div>
-          <img src="/classroom.png" className="w-full h-full" />
-        </div>
-      </section>
-
-      {/* FITUR */}
-      <section id="fitur" className="py-24">
-        <div className="container mx-auto px-4 grid md:grid-cols-2 gap-12 items-center">
-          <img src="/dashboard.png"/>
-          <div>
-            <h2 className="text-3xl font-bold mb-6">Solusi untuk Tantangan Kampus Anda</h2>
-            <Feature title="Pencarian Ruang Cerdas" desc="Temukan ruangan sesuai kebutuhan" />
-            <Feature title="Reservasi Online 24/7" desc="Ajukan kapan saja" />
-            <Feature title="Integrasi Kalender" desc="Sinkron dengan jadwal akademik" />
-          </div>
-        </div>
-      </section>
-
-      {/* TESTIMONI */}
-      <section id="testimoni" className="py-24 bg-muted">
-        <div className="container mx-auto px-4 grid md:grid-cols-2 gap-12 items-center">
-          <div>
-            <h2 className="text-4xl mb-10 font-bold mb-4 max-w-[400px]">Bagaimana <span className="text-[#4880FF]">SIRSAK</span> membantu mereka?</h2>
-            <p className="italic text-muted-foreground max-w-[500px]">
-              “Sebagai mahasiswa prodi informatika, terkadang saya sering mengalami kendala perubahan jadwal ruangan matkul yang tiba-tiba berubah atau bentrok dengan kelas matkul lain. Tapi sejak pake SIRSAK, saya sekarang bisa mantau informasi terbaru terkait ruangan yang ingin digunakan untuk kegiatan belajar mengajar, jadi gabakal telat buat dapat info kelas.”
-            </p>
-            <Badge className="mt-4">Mahasiswa Informatika</Badge>
-          </div>
-          <img src="/user.png" className="rounded-2xl shadow-xl" />
-        </div>
-      </section>
-
-      {/* FOOTER */}
-      <footer className="bg-zinc-900 text-zinc-400 py-12">
-        <div className="container mx-auto px-4 grid md:grid-cols-4 gap-8 text-sm">
-          <div>
-            <div className="flex items-center gap-2 text-white font-bold mb-2">
-              <img src="/sirsak.png" className="w-5 h-5" /> SIRSAK
+            {/* STATS */}
+            <div className="absolute bottom-0 left-0 right-0 translate-y-1/2 z-20">
+              <div className="container mx-auto px-4">
+                <div className="bg-white rounded-2xl shadow-xl grid grid-cols-2 md:grid-cols-4 gap-6 p-6 text-center">
+                  <Stat icon={<Users className="mx-auto text-emerald-600" />} value="200+" label="Pengguna Aktif" />
+                  <Stat icon={<Building2 className="mx-auto text-emerald-600" />} value="40+" label="Ruangan Tersedia" />
+                  <Stat icon={<CalendarCheck className="mx-auto text-emerald-600" />} value="100+" label="Reservasi/Bulan" />
+                  <Stat icon={<Star className="mx-auto text-emerald-600" />} value="88%" label="Kepuasan" />
+                </div>
+              </div>
             </div>
-            <p>Solusi reservasi ruangan kampus modern.</p>
-          </div>
-          <FooterCol title="Tentang" items={["Beranda", "Fitur", "Testimoni"]} />
-          <FooterCol title="Layanan" items={["Reservasi", "Kalender", "Pencarian"]} />
-          <FooterCol title="Sumber Daya" items={["FAQ", "Kontak"]} />
+          </section>
+          <div className="h-32 md:h-24 bg-[#f4f5f6]" />
+
+          {/* TENTANG */}
+          <section id="tentang" className="py-24 bg-muted">
+            <div className="container mx-auto px-4 grid md:grid-cols-2 gap-12 items-center">
+              <div className="ml-[110px]">
+                <h2 className="text-3xl font-bold mb-4">Apa Itu <span className="text-[#4880FF]">SIRSAK</span>?</h2>
+                <p className="mb-6 max-w-[600px]">
+                  <span className="font-bold">SIRSAK (Sistem Informasi Ruangan Sunan Kalijaga)</span> adalah platform digital yang dirancang khusus untuk mengatasi permasalahan pengelolaan ruangan di UIN Sunan Kalijaga.
+                </p>
+                <p className="mb-1 max-w-[600px]">Pengelolaan ruangan di kampus yang masih dilakukan secara manual sering menyebabkan berbagai masalah seperti:</p>
+                <ul className="list-disc ml-5 text-black space-y-1">
+                  <li>Jadwal bentrok</li>
+                  <li>Ruangan tidak tersedia</li>
+                  <li>Perubahan mendadak</li>
+                </ul>
+                <p className="mt-6 max-w-[600px]"><span className="font-bold">SIRSAK</span> hadir sebagai solusi modern untuk mengoptimalkan penggunaan ruangan kampus.</p>
+              </div>
+              <img src="/classroom.png" className="w-full h-full" />
+            </div>
+          </section>
+
+          {/* FITUR */}
+          <section id="fitur" className="py-24">
+            <div className="container mx-auto px-4 grid md:grid-cols-2 gap-12 items-center">
+              <img src="/dashboard.png"/>
+              <div>
+                <h2 className="text-3xl font-bold mb-6">Solusi untuk Tantangan Kampus Anda</h2>
+                <Feature title="Pencarian Ruang Cerdas" desc="Temukan ruangan sesuai kebutuhan" />
+                <Feature title="Reservasi Online 24/7" desc="Ajukan kapan saja" />
+                <Feature title="Integrasi Kalender" desc="Sinkron dengan jadwal akademik" />
+              </div>
+            </div>
+          </section>
+
+          {/* TESTIMONI */}
+          <section id="testimoni" className="py-24 bg-muted">
+            <div className="container mx-auto px-4 grid md:grid-cols-2 gap-12 items-center">
+              <div>
+                <h2 className="text-4xl mb-10 font-bold mb-4 max-w-[400px]">Bagaimana <span className="text-[#4880FF]">SIRSAK</span> membantu mereka?</h2>
+                <p className="italic text-muted-foreground max-w-[500px]">
+                  “Sebagai mahasiswa prodi informatika, terkadang saya sering mengalami kendala perubahan jadwal ruangan matkul yang tiba-tiba berubah atau bentrok dengan kelas matkul lain. Tapi sejak pake SIRSAK, saya sekarang bisa mantau informasi terbaru terkait ruangan yang ingin digunakan untuk kegiatan belajar mengajar, jadi gabakal telat buat dapat info kelas.”
+                </p>
+                <Badge className="mt-4">Mahasiswa Informatika</Badge>
+              </div>
+              <img src="/user.png" className="rounded-2xl shadow-xl" />
+            </div>
+          </section>
+
+          {/* FOOTER */}
+          <footer className="bg-zinc-900 text-zinc-400 py-12">
+            <div className="container mx-auto px-4 grid md:grid-cols-4 gap-8 text-sm">
+              <div>
+                <div className="flex items-center gap-2 text-white font-bold mb-2">
+                  <img src="/sirsak.png" className="w-5 h-5" /> SIRSAK
+                </div>
+                <p>Solusi reservasi ruangan kampus modern.</p>
+              </div>
+              <FooterCol title="Tentang" items={["Beranda", "Fitur", "Testimoni"]} />
+              <FooterCol title="Layanan" items={["Reservasi", "Kalender", "Pencarian"]} />
+              <FooterCol title="Sumber Daya" items={["FAQ", "Kontak"]} />
+            </div>
+          </footer>
         </div>
-      </footer>
-    </div>
+      </main>
+    </>
   );
 }
 
